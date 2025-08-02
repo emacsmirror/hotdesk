@@ -63,16 +63,6 @@
 (defconst hotdesk--grid-editor-name "*Hotdesk Grid Editor*")
 (defconst hotdesk--list-editor-name "*Hotdesk List Editor*")
 
-(defmacro hotdesk--without-mode-hooks (&rest body)
-  "Execute BODY without `hotdesk-mode' hooks to prevent recursion/side-effect."
-  `(let ((after-change-major-mode-hook
-          (remove #'hotdesk--mode--buffer-mode-change-hook
-                  after-change-major-mode-hook))
-         (buffer-list-update-hook
-          (remove #'hotdesk--mode--buffer-list-update-hook
-                  buffer-list-update-hook)))
-     ,@body))
-
 ;;
 ;;  hotdesk mode
 ;;
@@ -123,11 +113,8 @@
   :global t
   (if hotdesk-mode
       (progn
-        (hotdesk--desktop--save-enable)
-        (add-hook 'after-change-major-mode-hook
-                  #'hotdesk--mode--buffer-mode-change-hook)
-        (add-hook 'buffer-list-update-hook
-                  #'hotdesk--mode--buffer-list-update-hook)
+        (hotdesk--desktop--enable)
+        (hotdesk--mode--buffer-hooks-enable)
         (add-hook 'hotdesk--grid-editor-mode-hook
                   #'hotdesk--grid-editor--mode-on-start)
         (add-hook 'hotdesk--list-editor-mode-hook
@@ -135,11 +122,8 @@
         (add-hook 'delete-frame-functions
                   #'hotdesk--mode-on-frame-deleted))
     (progn
-      (hotdesk--desktop--save-disable)
-      (remove-hook 'after-change-major-mode-hook
-                   #'hotdesk--mode--buffer-mode-change-hook)
-      (remove-hook 'buffer-list-update-hook
-                   #'hotdesk--mode--buffer-list-update-hook)
+      (hotdesk--desktop--disable)
+      (hotdesk--mode--buffer-hooks-disable)
       (remove-hook 'hotdesk--grid-editor-mode-hook
                    #'hotdesk--grid-editor--mode-on-start)
       (remove-hook 'hotdesk--list-editor-mode-hook
@@ -161,12 +145,26 @@
   (setq-local minor-mode-alist
               (assq-delete-all 'hotdesk-mode minor-mode-alist)))
 
+(defun hotdesk--mode--buffer-hooks-enable ()
+  "Activate hooks when mode enabled."
+  (add-hook 'after-change-major-mode-hook
+            #'hotdesk--mode--buffer-mode-change-hook)
+  (add-hook 'buffer-list-update-hook
+            #'hotdesk--mode--buffer-list-update-hook))
+
+(defun hotdesk--mode--buffer-hooks-disable ()
+  "Deactivate hooks when mode disable."
+  (remove-hook 'after-change-major-mode-hook
+               #'hotdesk--mode--buffer-mode-change-hook)
+  (remove-hook 'buffer-list-update-hook
+               #'hotdesk--mode--buffer-list-update-hook))
+
 (defun hotdesk--mode--buffer-mode-change-hook ()
   "On major mode change, append frame label to buffer if not already present."
-  (let* ((frame  (last-nonminibuffer-frame))
-         (label  (hotdesk--frame--get-label frame))
-         (buffer (current-buffer))
-         (name   (buffer-name buffer))
+  (let* ((frame   (last-nonminibuffer-frame))
+         (label   (hotdesk--frame--get-label frame))
+         (buffer  (current-buffer))
+         (name    (buffer-name buffer))
          (listing (hotdesk--listing--get-name frame label)))
     (when (and label (not (equal name listing)))
       (let ((labels (hotdesk--buffer--get-labels buffer)))
@@ -255,12 +253,11 @@ Add your own functions to customise labelling rules."
 
 (defun hotdesk--buffer--add-label (buffer label)
   "Attempt to append LABEL to BUFFER's label list and trigger UI update."
-  (hotdesk--without-mode-hooks
-    (when (hotdesk--buffer--allow-label-p buffer label)
-      (unless (hotdesk--buffer--has-label buffer label)
-        (let ((labels (hotdesk--buffer--get-labels buffer)))
-          (hotdesk--buffer--set-labels buffer (cons label labels))
-          (hotdesk-refresh label))))))
+  (when (hotdesk--buffer--allow-label-p buffer label)
+    (unless (hotdesk--buffer--has-label buffer label)
+      (let ((labels (hotdesk--buffer--get-labels buffer)))
+        (hotdesk--buffer--set-labels buffer (cons label labels))
+        (hotdesk-refresh label)))))
 
 (defun hotdesk--buffer--del-label (buffer label)
   "Remove LABEL from BUFFER's label list."
@@ -345,31 +342,42 @@ If LABEL is nil, applies to all frames.  Invoking `revert-buffer'
 delegates to the `revert-buffer-function' prepared by
  `hotdesk--listing--get-buffer-create', specifically
  `hotdesk--listing--rebuild'."
-  (hotdesk--without-mode-hooks
-   (let ((labels (if (null label) (hotdesk--get-all-labels) (list label))))
-     (dolist (frame (frame-list))
-       (let ((label (hotdesk--frame--get-label frame)))
-         (when (or (null labels) (memq label labels))
-           (let ((win (get-buffer-window
-                       (hotdesk--listing--get-name frame label) frame)))
-             (when win
-               (with-selected-window win
-                 (revert-buffer :ignore-auto :noconfirm))))))))))
+  (let ((labels (if (null label) (hotdesk--get-all-labels) (list label))))
+    (dolist (frame (frame-list))
+      (let ((label (hotdesk--frame--get-label frame)))
+        (when (or (null labels) (memq label labels))
+          (let ((win (get-buffer-window
+                      (hotdesk--listing--get-name frame label) frame)))
+            (when win
+              (with-selected-window win
+                (revert-buffer :ignore-auto :noconfirm)))))))))
 
 ;;
 ;;  desktop integration
 ;;
-(defun hotdesk--desktop--save-enable ()
-  "Add `hotdesk-tag' to `desktop-locals-to-save'.
-Invoked when `hotdesk-mode' is enabled."
-  (unless (memq 'hotdesk-tag desktop-locals-to-save)
-    (add-to-list 'desktop-locals-to-save 'hotdesk-tag)))
+(defun hotdesk--advice-desktop-read (orig-fun &rest args)
+  "Passthrough invoke `desktop-read' ORIG-FUN using ARGS.
+Disable buffer hooks during `desktop-read' to permit external labelling."
+  (hotdesk--mode--buffer-hooks-disable)
+  (unwind-protect
+      (apply orig-fun args)
+    (hotdesk--mode--buffer-hooks-enable)))
 
-(defun hotdesk--desktop--save-disable ()
-  "Del `hotdesk-tag' from `desktop-locals-to-save'.
-Invoked whe `hotdesk-mode' is disabled."
-  (setq desktop-locals-to-save
-        (remove 'hotdesk-tag desktop-locals-to-save)))
+(defun hotdesk--desktop--enable ()
+  "When desktop features available, persist labels and manage hook advice."
+  (when (fboundp 'desktop-read)
+    (advice-add 'desktop-read :around #'hotdesk--advice-desktop-read))
+  (when (boundp 'desktop-locals-to-save)
+    (unless (memq 'hotdesk-tag desktop-locals-to-save)
+      (add-to-list 'desktop-locals-to-save 'hotdesk-tag))))
+
+(defun hotdesk--desktop--disable ()
+  "When desktop features available, undo label persist and advice."
+  (when (fboundp 'desktop-read)
+    (advice-remove 'desktop-read #'hotdesk--advice-desktop-read))
+  (when (boundp 'desktop-locals-to-save)
+    (setq desktop-locals-to-save
+          (remove 'hotdesk-tag desktop-locals-to-save))))
 
 ;;
 ;;  grid editor
@@ -449,21 +457,20 @@ Include the major mode if the column is enabled."
 
 (defun hotdesk--grid-editor--refresh ()
   "Refresh the contents of the current grid editor buffer."
-  (hotdesk--without-mode-hooks
-   (let ((inhibit-read-only t))
-     (hotdesk--grid-editor--setup-columns)
-     (let* ((col0            (current-column))
-            (row0            (line-number-at-pos))
-            (buffers         (hotdesk--get-all-user-buffers))
-            (flabels         (hotdesk--get-all-labels)))
-       (setq tabulated-list-entries
-             (mapcar (lambda (buffer)
-                       (hotdesk--grid-editor--render-row buffer flabels))
-                     buffers))
-       (tabulated-list-print t)
-       (goto-char (point-min))
-       (forward-line (1- row0))
-       (move-to-column col0)))))
+  (let ((inhibit-read-only t))
+    (hotdesk--grid-editor--setup-columns)
+    (let* ((col0            (current-column))
+           (row0            (line-number-at-pos))
+           (buffers         (hotdesk--get-all-user-buffers))
+           (flabels         (hotdesk--get-all-labels)))
+      (setq tabulated-list-entries
+            (mapcar (lambda (buffer)
+                      (hotdesk--grid-editor--render-row buffer flabels))
+                    buffers))
+      (tabulated-list-print t)
+      (goto-char (point-min))
+      (forward-line (1- row0))
+      (move-to-column col0))))
 
 (define-derived-mode hotdesk--grid-editor-mode tabulated-list-mode
   "Hotdesk Grid Editor"
@@ -493,10 +500,9 @@ Include the major mode if the column is enabled."
     (when (and buffer (>= index 0) (< index (length labels)))
       (let ((label (nth index labels)))
         (when (and label (hotdesk--buffer--allow-label-p buffer label))
-          (hotdesk--without-mode-hooks
-           (if (hotdesk--buffer--has-label buffer label)
-               (hotdesk--buffer--del-label buffer label)
-             (hotdesk--buffer--add-label buffer label)))
+          (if (hotdesk--buffer--has-label buffer label)
+              (hotdesk--buffer--del-label buffer label)
+            (hotdesk--buffer--add-label buffer label))
           (hotdesk-refresh label)
           (select-window grid)
           (tabulated-list-print t)
@@ -529,37 +535,36 @@ Include the major mode if the column is enabled."
 
 (defun hotdesk--list-editor--refresh ()
   "Rebuild the editor content with current frame labels."
-  (hotdesk--without-mode-hooks
-   (let ((editor (get-buffer hotdesk--list-editor-name)))
-     (when (and editor (buffer-live-p editor))
-       (with-current-buffer editor
-         (when (eq major-mode 'hotdesk--list-editor-mode)
-           (if (buffer-live-p hotdesk--list-editor--source-buffer)
-               (let* ((source hotdesk--list-editor--source-buffer)
-                      (bufname (buffer-name source))
-                      (col-width (+ 1 (max 9 (string-width bufname))))
-                      (format (vector
-                               (list bufname col-width t)
-                               (list "Label" 25 t)))
-                      (flabels (hotdesk--get-all-labels)))
-                 (if (null flabels)
-                     (let ((inhibit-read-only t))
-                       (erase-buffer)
-                       (insert "No labels defined, assign a frame label."))
-                   (progn
-                     (let ((entries
-                            (mapcar
-                             (lambda (label)
-                               (hotdesk--list-editor--render-row source label))
-                             flabels)))
-                       (setq tabulated-list-format format)
-                       (setq tabulated-list-entries nil)
-                       (tabulated-list-init-header)
-                       (setq tabulated-list-entries entries)
-                       (tabulated-list-print t)))))
-             (let ((inhibit-read-only t))
-               (erase-buffer)
-               (insert "Source buffer is no longer available.")))))))))
+  (let ((editor (get-buffer hotdesk--list-editor-name)))
+    (when (and editor (buffer-live-p editor))
+      (with-current-buffer editor
+        (when (eq major-mode 'hotdesk--list-editor-mode)
+          (if (buffer-live-p hotdesk--list-editor--source-buffer)
+              (let* ((source hotdesk--list-editor--source-buffer)
+                     (bufname (buffer-name source))
+                     (col-width (+ 1 (max 9 (string-width bufname))))
+                     (format (vector
+                              (list bufname col-width t)
+                              (list "Label" 25 t)))
+                     (flabels (hotdesk--get-all-labels)))
+                (if (null flabels)
+                    (let ((inhibit-read-only t))
+                      (erase-buffer)
+                      (insert "No labels defined, assign a frame label."))
+                  (progn
+                    (let ((entries
+                           (mapcar
+                            (lambda (label)
+                              (hotdesk--list-editor--render-row source label))
+                            flabels)))
+                      (setq tabulated-list-format format)
+                      (setq tabulated-list-entries nil)
+                      (tabulated-list-init-header)
+                      (setq tabulated-list-entries entries)
+                      (tabulated-list-print t)))))
+            (let ((inhibit-read-only t))
+              (erase-buffer)
+              (insert "Source buffer is no longer available."))))))))
 
 (define-derived-mode hotdesk--list-editor-mode tabulated-list-mode
   "Hotdesk List Editor"
@@ -765,14 +770,13 @@ The buffers offerred for selection are restricted to those labelled for
 (defun hotdesk-start-list-editor ()
   "Interactively toggle label assignment for the current buffer."
   (interactive)
-  (hotdesk--without-mode-hooks
-   (let* ((source (current-buffer))
-          (editor (get-buffer-create hotdesk--list-editor-name)))
-     (with-current-buffer editor
-       (hotdesk--list-editor-mode)
-       (setq-local hotdesk--list-editor--source-buffer source)
-       (hotdesk-refresh))
-     (pop-to-buffer editor))))
+  (let* ((source (current-buffer))
+         (editor (get-buffer-create hotdesk--list-editor-name)))
+    (with-current-buffer editor
+      (hotdesk--list-editor-mode)
+      (setq-local hotdesk--list-editor--source-buffer source)
+      (hotdesk-refresh))
+    (pop-to-buffer editor)))
 
 (defun hotdesk-refresh (&optional label)
   "Update listing buffer and LABEL related UI buffers."
