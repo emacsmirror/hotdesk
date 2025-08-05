@@ -41,7 +41,7 @@
 ;;
 ;; This program is free software; you can redistribute it and/or modify it
 ;; under the terms of the GNU Lesser General Public License as published by
-;; the Free Software Foundation; version 3.0 only.
+;; the Free Software Foundation; version 3.0 or later.
 ;;
 ;; This program is distributed in the hope that it will be useful, but
 ;; WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
@@ -445,7 +445,7 @@ Include the major mode if the column is enabled."
               ((hotdesk--buffer--has-label buffer l)           "[x]")
               (t                                               "[ ]")))
            labels)))
-    (list buffer (apply 'vector (cons buffer-name
+    (list buffer (apply #'vector (cons buffer-name
                                       (append mode-column label-columns))))))
 
 (defun hotdesk--grid-editor-toggle-mode-column ()
@@ -609,7 +609,7 @@ Include the major mode if the column is enabled."
           (delq nil (mapcar #'hotdesk--frame--get-label (frame-list)))))
         (buffer-labels
          (delete-dups
-          (apply 'append
+          (apply #'append
                  (mapcar (lambda (buffer)
                            (hotdesk--buffer--get-labels buffer))
                          (buffer-list))))))
