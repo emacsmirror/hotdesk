@@ -333,8 +333,7 @@ reset this to `tabulated-list-revert'."
       (erase-buffer)
       (tabulated-list-init-header)
       (hotdesk--listing--get-buffer-create frame)
-      (goto-char (point-min))
-      (tabulated-list-print t))))
+      (tabulated-list-print t t))))
 
 (defun hotdesk--listing--refresh (&optional label)
   "Refresh the visible listing windows (buffer lists) for LABEL frames.
@@ -459,18 +458,13 @@ Include the major mode if the column is enabled."
   "Refresh the contents of the current grid editor buffer."
   (let ((inhibit-read-only t))
     (hotdesk--grid-editor--setup-columns)
-    (let* ((col0            (current-column))
-           (row0            (line-number-at-pos))
-           (buffers         (hotdesk--get-all-user-buffers))
-           (flabels         (hotdesk--get-all-labels)))
+    (let* ((buffers (hotdesk--get-all-user-buffers))
+           (labels  (hotdesk--get-all-labels)))
       (setq tabulated-list-entries
             (mapcar (lambda (buffer)
-                      (hotdesk--grid-editor--render-row buffer flabels))
+                      (hotdesk--grid-editor--render-row buffer labels))
                     buffers))
-      (tabulated-list-print t)
-      (goto-char (point-min))
-      (forward-line (1- row0))
-      (move-to-column col0))))
+      (tabulated-list-print t t))))
 
 (define-derived-mode hotdesk-grid-editor-mode tabulated-list-mode
   "Hotdesk Grid Editor"
@@ -512,8 +506,7 @@ The editor is contolled with:
             (hotdesk--buffer--add-label buffer label))
           (hotdesk-refresh label)
           (select-window grid)
-          (tabulated-list-print t)
-          (move-to-column col))))))
+          (tabulated-list-print t t))))))
 
 (defun hotdesk--grid-editor-quit ()
   "Quit the hotdesk grid editor by killing its buffer."
@@ -568,7 +561,7 @@ The editor is contolled with:
                       (setq tabulated-list-entries nil)
                       (tabulated-list-init-header)
                       (setq tabulated-list-entries entries)
-                      (tabulated-list-print t)))))
+                      (tabulated-list-print t t)))))
             (let ((inhibit-read-only t))
               (erase-buffer)
               (insert "Source buffer is no longer available."))))))))
