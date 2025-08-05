@@ -66,16 +66,16 @@
 ;;
 ;;  hotdesk mode
 ;;
-(defvar-keymap hotdesk--list-editor-mode-map
-  :doc "Keymap for hotdesk--list-editor-mode."
+(defvar-keymap hotdesk-list-editor-mode-map
+  :doc "Keymap for hotdesk-list-editor-mode."
   :parent tabulated-list-mode-map
   "<SPC>" #'hotdesk--list-editor-toggle-label
   "x"     #'hotdesk--list-editor-toggle-label
   "q"     #'hotdesk--list-editor-quit
   "g"     #'hotdesk-refresh)
 
-(defvar-keymap hotdesk--grid-editor-mode-map
-  :doc "Keymap for hotdesk--grid-editor-mode."
+(defvar-keymap hotdesk-grid-editor-mode-map
+  :doc "Keymap for hotdesk-grid-editor-mode."
   :parent tabulated-list-mode-map
   "m"     #'hotdesk--grid-editor-toggle-mode-column
   "<SPC>" #'hotdesk--grid-editor-toggle-label
@@ -115,18 +115,18 @@
       (progn
         (hotdesk--desktop--enable)
         (hotdesk--mode--buffer-hooks-enable)
-        (add-hook 'hotdesk--grid-editor-mode-hook
+        (add-hook 'hotdesk-grid-editor-mode-hook
                   #'hotdesk--grid-editor--mode-on-start)
-        (add-hook 'hotdesk--list-editor-mode-hook
+        (add-hook 'hotdesk-list-editor-mode-hook
                   #'hotdesk--list-editor--mode-on-start)
         (add-hook 'delete-frame-functions
                   #'hotdesk--mode-on-frame-deleted))
     (progn
       (hotdesk--desktop--disable)
       (hotdesk--mode--buffer-hooks-disable)
-      (remove-hook 'hotdesk--grid-editor-mode-hook
+      (remove-hook 'hotdesk-grid-editor-mode-hook
                    #'hotdesk--grid-editor--mode-on-start)
-      (remove-hook 'hotdesk--list-editor-mode-hook
+      (remove-hook 'hotdesk-list-editor-mode-hook
                    #'hotdesk--list-editor--mode-on-start)
       (remove-hook 'delete-frame-functions
                    #'hotdesk--mode-on-frame-deleted))))
@@ -472,9 +472,16 @@ Include the major mode if the column is enabled."
       (forward-line (1- row0))
       (move-to-column col0))))
 
-(define-derived-mode hotdesk--grid-editor-mode tabulated-list-mode
+(define-derived-mode hotdesk-grid-editor-mode tabulated-list-mode
   "Hotdesk Grid Editor"
-  "Major mode for editing global buffer-to-frame label assignments."
+  "Editor for assigning buffer labels globally.
+
+All defined labels (applied to either frames or buffers) are shown in columns.
+The number '[n]' in the heading row gives the number of frames using that label.
+
+The editor is contolled with:
+\\{hotdesk-grid-editor-mode-map}"
+  :interactive nil
   (hotdesk--grid-editor--setup-columns)
   (hotdesk--grid-editor--refresh))
 
@@ -514,7 +521,7 @@ Include the major mode if the column is enabled."
   (let ((buffer (get-buffer hotdesk--grid-editor-name)))
     (when (and buffer
                (with-current-buffer buffer
-                 (eq major-mode 'hotdesk--grid-editor-mode)))
+                 (eq major-mode 'hotdesk-grid-editor-mode)))
       (kill-buffer buffer))))
 
 ;;
@@ -538,7 +545,7 @@ Include the major mode if the column is enabled."
   (let ((editor (get-buffer hotdesk--list-editor-name)))
     (when (and editor (buffer-live-p editor))
       (with-current-buffer editor
-        (when (eq major-mode 'hotdesk--list-editor-mode)
+        (when (eq major-mode 'hotdesk-list-editor-mode)
           (if (buffer-live-p hotdesk--list-editor--source-buffer)
               (let* ((source hotdesk--list-editor--source-buffer)
                      (bufname (buffer-name source))
@@ -566,9 +573,13 @@ Include the major mode if the column is enabled."
               (erase-buffer)
               (insert "Source buffer is no longer available."))))))))
 
-(define-derived-mode hotdesk--list-editor-mode tabulated-list-mode
+(define-derived-mode hotdesk-list-editor-mode tabulated-list-mode
   "Hotdesk List Editor"
-  "Major mode for interactively toggling label assignment for buffer."
+  "Editor for interactively toggling a buffer's label assignments.
+
+The editor is contolled with:
+\\{hotdesk-list-editor-mode-map}"
+  :interactive nil
   (tabulated-list-init-header))
 
 (defun hotdesk--list-editor-toggle-label ()
@@ -764,7 +775,7 @@ The buffers offerred for selection are restricted to those labelled for
   (interactive)
   (let ((buffer (get-buffer-create hotdesk--grid-editor-name)))
     (with-current-buffer buffer
-      (hotdesk--grid-editor-mode))
+      (hotdesk-grid-editor-mode))
     (pop-to-buffer buffer)))
 
 (defun hotdesk-start-list-editor ()
@@ -773,7 +784,7 @@ The buffers offerred for selection are restricted to those labelled for
   (let* ((source (current-buffer))
          (editor (get-buffer-create hotdesk--list-editor-name)))
     (with-current-buffer editor
-      (hotdesk--list-editor-mode)
+      (hotdesk-list-editor-mode)
       (setq-local hotdesk--list-editor--source-buffer source)
       (hotdesk-refresh))
     (pop-to-buffer editor)))
