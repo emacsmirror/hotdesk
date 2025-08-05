@@ -69,19 +69,19 @@
 (defvar-keymap hotdesk-list-editor-mode-map
   :doc "Keymap for hotdesk-list-editor-mode."
   :parent tabulated-list-mode-map
-  "<SPC>" #'hotdesk--list-editor-toggle-label
-  "x"     #'hotdesk--list-editor-toggle-label
-  "q"     #'hotdesk--list-editor-quit
+  "<SPC>" #'hotdesk-list-editor-toggle-label
+  "x"     #'hotdesk-list-editor-toggle-label
+  "q"     #'hotdesk-list-editor-quit
   "g"     #'hotdesk-refresh)
 
 (defvar-keymap hotdesk-grid-editor-mode-map
   :doc "Keymap for hotdesk-grid-editor-mode."
   :parent tabulated-list-mode-map
-  "m"     #'hotdesk--grid-editor-toggle-mode-column
-  "<SPC>" #'hotdesk--grid-editor-toggle-label
-  "x"     #'hotdesk--grid-editor-toggle-label
-  "RET"   #'hotdesk--grid-editor-visit-buffer
-  "q"     #'hotdesk--grid-editor-quit
+  "m"     #'hotdesk-grid-editor-toggle-mode-column
+  "<SPC>" #'hotdesk-grid-editor-toggle-label
+  "x"     #'hotdesk-grid-editor-toggle-label
+  "RET"   #'hotdesk-grid-editor-visit-buffer
+  "q"     #'hotdesk-grid-editor-quit
   "g"     #'hotdesk-refresh)
 
 (defvar-keymap hotdesk-mode-map
@@ -98,7 +98,8 @@
   "C-c C-k l"   #'hotdesk-start-list-editor
   "C-c C-k ="   #'hotdesk-get-buffer-labels
   "C-c C-k +"   #'hotdesk-add-buffer-label
-  "C-c C-k -"   #'hotdesk-del-buffer-label)
+  "C-c C-k -"   #'hotdesk-del-buffer-label
+  "C-c C-k r"   #'hotdesk-refresh)
 
 (defgroup hotdesk nil
   "Frame-centric buffer management for Emacs."
@@ -208,14 +209,6 @@ Updates are triggerred by functions like `rename-buffer', `kill-buffer' and
   (hotdesk--frame--set-label frame label)
   (hotdesk-refresh))
 
-(defun hotdesk--frame--create (title label)
-  "Create a new frame and assign TITLE and LABEL."
-  (interactive "sFrame title: \nsFrame label symbol: ")
-  (unless hotdesk-mode (user-error "Enable `hotdesk-mode' first"))
-  (let ((frame (make-frame `((title . ,title) (minibuffer . t)))))
-    (hotdesk--frame--init frame title label)
-    frame))
-
 ;;
 ;;  buffer functions
 ;;
@@ -280,7 +273,6 @@ Predicates are defined in `hotdesk-buffer-deny-label-predicates'."
 
 (defun hotdesk--buffer--other (buffer frame)
   "Return most recent buffer other than BUFFER in FRAME, as per `other-buffer'."
-  (interactive)
   (other-buffer buffer t frame))
 
 (defun hotdesk--buffer--filter-is-user-buffer-p (buffer)
@@ -447,7 +439,7 @@ Include the major mode if the column is enabled."
     (list buffer (apply #'vector (cons buffer-name
                                       (append mode-column label-columns))))))
 
-(defun hotdesk--grid-editor-toggle-mode-column ()
+(defun hotdesk-grid-editor-toggle-mode-column ()
   "Toggle the visibility of the major mode column in the grid editor."
   (interactive)
   (setq hotdesk--grid-editor-show-mode-column
@@ -479,7 +471,7 @@ The editor is contolled with:
   (hotdesk--grid-editor--setup-columns)
   (hotdesk--grid-editor--refresh))
 
-(defun hotdesk--grid-editor-visit-buffer ()
+(defun hotdesk-grid-editor-visit-buffer ()
   "Open selected buffer and assign current frame's label to it."
   (interactive)
   (let* ((buffer (tabulated-list-get-id))
@@ -490,7 +482,7 @@ The editor is contolled with:
       (hotdesk-refresh label)
       (switch-to-buffer-other-window buffer))))
 
-(defun hotdesk--grid-editor-toggle-label ()
+(defun hotdesk-grid-editor-toggle-label ()
   "Toggle assignment between buffer and frame-label at point."
   (interactive)
   (let* ((grid   (selected-window))
@@ -508,7 +500,7 @@ The editor is contolled with:
           (select-window grid)
           (tabulated-list-print t t))))))
 
-(defun hotdesk--grid-editor-quit ()
+(defun hotdesk-grid-editor-quit ()
   "Quit the hotdesk grid editor by killing its buffer."
   (interactive)
   (let ((buffer (get-buffer hotdesk--grid-editor-name)))
@@ -575,7 +567,7 @@ The editor is contolled with:
   :interactive nil
   (tabulated-list-init-header))
 
-(defun hotdesk--list-editor-toggle-label ()
+(defun hotdesk-list-editor-toggle-label ()
   "Toggle frame-label assignment for the label at point, if allowed."
   (interactive)
   (let* ((label (tabulated-list-get-id))
@@ -587,7 +579,7 @@ The editor is contolled with:
         (hotdesk--buffer--add-label buffer label))
       (hotdesk-refresh))))
 
-(defun hotdesk--list-editor-quit ()
+(defun hotdesk-list-editor-quit ()
   "Quit the hotdesk list editor by killing its buffer."
   (interactive)
   (let ((buffer hotdesk--list-editor-name))
@@ -762,6 +754,9 @@ The buffers offerred for selection are restricted to those labelled for
         (let ((buffer (hotdesk--listing--get-buffer-create frame)))
           (display-buffer buffer '(display-buffer-pop-up-window)))
       (message "The frame is invalid or has been deleted."))))
+
+(defalias 'list-hotdesk-buffers 'hotdesk-show-listing
+  "Provide list function as per Emacs standards.")
 
 (defun hotdesk-start-grid-editor ()
   "Display a global interactive buffer-to-frame-label assignment grid."
