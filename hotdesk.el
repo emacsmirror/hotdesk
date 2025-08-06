@@ -755,7 +755,7 @@ The buffers offerred for selection are restricted to those labelled for
           (display-buffer buffer '(display-buffer-pop-up-window)))
       (message "The frame is invalid or has been deleted."))))
 
-(defalias 'list-hotdesk-buffers 'hotdesk-show-listing
+(defalias 'list-hotdesk-buffers #'hotdesk-show-listing
   "Provide list function as per Emacs standards.")
 
 (defun hotdesk-start-grid-editor ()
