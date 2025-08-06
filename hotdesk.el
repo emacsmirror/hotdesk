@@ -166,7 +166,7 @@
          (label   (hotdesk--frame--get-label frame))
          (buffer  (current-buffer))
          (name    (buffer-name buffer))
-         (listing (hotdesk--listing--get-name frame label)))
+         (listing (hotdesk--listing--get-name label)))
     (when (and label (not (equal name listing)))
       (let ((labels (hotdesk--buffer--get-labels buffer)))
         (unless (memq label labels)
@@ -287,11 +287,9 @@ Returns nil for unmatched (and unlabelled) buffers."
 ;;
 ;;  listing functions (as in the list of buffers for a frame)
 ;;
-(defun hotdesk--listing--get-name (frame label)
+(defun hotdesk--listing--get-name (label)
   "Generate a unique `buffer-list' name from LABEL and FRAME."
-  (if label
-      (format "*Buffer List: %s*" label)
-    (format "*Buffer List: default-%s*" (frame-parameter frame 'window-id))))
+  (format "*Buffer List: %s*" label))
 
 (defun hotdesk--listing--get-buffer-create (frame)
   "Overload Emacs `get-buffer-create' and rename the buffer for FRAME.
@@ -300,23 +298,25 @@ This needs to done every invocation because Emacs `get-buffer-create' internals
 reset this to `tabulated-list-revert'."
   (unless (frame-live-p frame)
     (error "Attempted to refresh buffer list for non-existent frame"))
-  (let* ((label       (hotdesk--frame--get-label frame))
-         (newname     (hotdesk--listing--get-name frame label))
-         (original-fn (symbol-function 'get-buffer-create)))
-    (cl-letf (((symbol-function 'get-buffer-create)
-               (lambda (name &rest rest)
-                 (if (string= name "*Buffer List*")
-                     (apply original-fn newname rest)
-                   (apply original-fn newname rest)))))
-      (let ((buffer (list-buffers-noselect
-                     nil
-                     (lambda () (hotdesk--frame--get-buffers frame)))))
-        (when (buffer-live-p buffer)
-          (with-current-buffer buffer
-            (setq-local revert-buffer-function
+  (let ((label (hotdesk--frame--get-label frame)))
+    (if label
+        (let* ((newname     (hotdesk--listing--get-name label))
+               (original-fn (symbol-function 'get-buffer-create)))
+          (cl-letf (((symbol-function 'get-buffer-create)
+                     (lambda (name &rest rest)
+                       (if (string= name "*Buffer List*")
+                           (apply original-fn newname rest)
+                         (apply original-fn name rest)))))
+            (let ((buffer (list-buffers-noselect
+                           nil
+                           (lambda () (hotdesk--frame--get-buffers frame)))))
+              (when (buffer-live-p buffer)
+                (with-current-buffer buffer
+                  (setq-local revert-buffer-function
                         (lambda (&rest _)
                           (hotdesk--listing--rebuild frame (current-buffer)))))
-          buffer)))))
+                buffer))))
+      (list-buffers-noselect nil nil))))
 
 (defun hotdesk--listing--rebuild (frame buffer)
   "Reinitialise the contents of BUFFER to match the buffer list for FRAME."
@@ -338,7 +338,7 @@ delegates to the `revert-buffer-function' prepared by
       (let ((label (hotdesk--frame--get-label frame)))
         (when (or (null labels) (memq label labels))
           (let ((win (get-buffer-window
-                      (hotdesk--listing--get-name frame label) frame)))
+                      (hotdesk--listing--get-name label) frame)))
             (when win
               (with-selected-window win
                 (revert-buffer :ignore-auto :noconfirm)))))))))
@@ -649,8 +649,8 @@ frame (ie. not a rename), which increases flexibility when reorganising labels."
         (let* ((label     (intern new))
                (new-title (format hotdesk-frame-title-format label))
                (old-name  (when (not (string= old "<none>"))
-                            (hotdesk--listing--get-name frame old)))
-               (new-name  (hotdesk--listing--get-name frame label)))
+                            (hotdesk--listing--get-name old)))
+               (new-name  (hotdesk--listing--get-name label)))
 
           ;; Update visible buffers with the new label
           (dolist (win (window-list frame nil))
