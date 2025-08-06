@@ -88,18 +88,18 @@
   :doc "Keymap for `hotdesk-mode', a global minor mode for per-frame buffer
  groups."
   ;; Do not set :parent for a global minor mode map.
-  "C-c C-k ?"   #'hotdesk-get-frame-label
-  "C-c C-k !"   #'hotdesk-set-frame-label
-  "C-c C-k @"   #'hotdesk-set-frame-title
-  "C-c C-k $"   #'hotdesk-del-frame-label
-  "C-c C-k C-b" #'hotdesk-show-listing
-  "C-c C-k b"   #'hotdesk-switch-buffer
-  "C-c C-k g"   #'hotdesk-start-grid-editor
-  "C-c C-k l"   #'hotdesk-start-list-editor
-  "C-c C-k ="   #'hotdesk-get-buffer-labels
-  "C-c C-k +"   #'hotdesk-add-buffer-label
-  "C-c C-k -"   #'hotdesk-del-buffer-label
-  "C-c C-k r"   #'hotdesk-refresh)
+  "C-c C-d ?"   #'hotdesk-get-frame-label
+  "C-c C-d !"   #'hotdesk-set-frame-label
+  "C-c C-d @"   #'hotdesk-set-frame-title
+  "C-c C-d $"   #'hotdesk-del-frame-label
+  "C-c C-d C-b" #'hotdesk-show-listing
+  "C-c C-d b"   #'hotdesk-switch-buffer
+  "C-c C-d g"   #'hotdesk-start-grid-editor
+  "C-c C-d l"   #'hotdesk-start-list-editor
+  "C-c C-d ="   #'hotdesk-get-buffer-labels
+  "C-c C-d +"   #'hotdesk-add-buffer-label
+  "C-c C-d -"   #'hotdesk-del-buffer-label
+  "C-c C-d r"   #'hotdesk-refresh)
 
 (defgroup hotdesk nil
   "Frame-centric buffer management for Emacs."

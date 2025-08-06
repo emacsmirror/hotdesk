@@ -14,8 +14,8 @@ In summary `hotdesk` provides alternatives for two core Emacs functions:
 
   | Emacs function     | Emacs key binding | Hotdesk alernative function  |  Hotdesk key binding |
   | ---                | ---               | ---                          | ---                  |
-  | `list-buffers`     | `C-x C-b`         | `hotdesk-show-listing`       | `C-c C-k C-b`        |
-  | `switch-to-buffer` | `C-x b`           | `hotdesk-switch-buffer`      | `C-c C-k b`          |
+  | `list-buffers`     | `C-x C-b`         | `hotdesk-show-listing`       | `C-c C-d C-b`        |
+  | `switch-to-buffer` | `C-x b`           | `hotdesk-switch-buffer`      | `C-c C-d b`          |
 
 These provide a frame-filtered versions of the Emacs functions.
 
@@ -64,10 +64,10 @@ Labelling a frame enables it to participate in `hotdesk`, and is the only
 configuration requirement for the mode to work. You can interactively manage
 the current frame's label with:
 
- * `C-c C-k ?` show the current frame's label
- * `C-c C-k !` set the current frame's label
- * `C-c C-k $` delete the current frame's label
- * `C-c C-k @` set the current frame's title (for cosmetic purposes)
+ * `C-c C-d ?` show the current frame's label
+ * `C-c C-d !` set the current frame's label
+ * `C-c C-d $` delete the current frame's label
+ * `C-c C-d @` set the current frame's title (for cosmetic purposes)
 
 Programatically you can set the label for a frame (eg. your 'personal' frame)
 with:
@@ -101,15 +101,15 @@ assigned to the buffer, naturally building frame associations from your usage.
 Normally that's all you need, however you can view and edit the labels assigned
 to buffers directly with:
 
- * `C-c C-k l` open the list editor to manage the current buffer's labels, eg.
+ * `C-c C-d l` open the list editor to manage the current buffer's labels, eg.
 
         family.org  Label
         [ ]         work
         [x]         personal
  
- * `C-c C-k =` show the current buffer's labels
- * `C-c C-k +` add current frame label to the current buffer
- * `C-c C-k -` remove current frame label from the current buffer, and hide the buffer without killing
+ * `C-c C-d =` show the current buffer's labels
+ * `C-c C-d +` add current frame label to the current buffer
+ * `C-c C-d -` remove current frame label from the current buffer, and hide the buffer without killing
 
 Add and remove are useful because `hotdesk` doesn't prevent you (or Emacs)
 visiting any buffer you like within any frame.
@@ -117,7 +117,7 @@ visiting any buffer you like within any frame.
 For a global view of labels, the grid editor provides a matrix allowing you
 to easily modify assignments:
 
- * `C-c C-k g` open the grid editor to manage labels globally, eg.
+ * `C-c C-d g` open the grid editor to manage labels globally, eg.
 
         *Buffer* ▼                       [1]project   [1]work    [1]personal
         *Buffer List: personal*
@@ -143,8 +143,8 @@ Within the grid editor you can toggle a 'Major Mode' column with `m`.
 The `hotdesk` equivalents of Emacs list and switch buffer commands, within a
 frame scope are:
 
- * `C-c C-k C-b` list the buffers for the current frame
- * `C-c C-k b` switch to a buffer belonging to the current frame
+ * `C-c C-d C-b` list the buffers for the current frame
+ * `C-c C-d b` switch to a buffer belonging to the current frame
 
 Emacs' global buffer list named `*Buffer List*` remains available and
 unchanged. Frame specific buffer lists produced by `hotdesk` are named
@@ -250,4 +250,4 @@ Given the above labelling, visiting `projects.org` on your `personal` frame
 However as it won't be assigned a `personal` label, it won't appear in the
 frame's buffer list, nor be offered for selection when switching frame
 buffers. It will naturally move out of scope as you continue working in the
-frame, or you can hide it immediately with `C-c C-k -`.
+frame, or you can hide it immediately with `C-c C-d -`.
