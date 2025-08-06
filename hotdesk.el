@@ -162,12 +162,11 @@
 
 (defun hotdesk--mode--buffer-mode-change-hook ()
   "On major mode change, append frame label to buffer if not already present."
-  (let* ((frame   (last-nonminibuffer-frame))
-         (label   (hotdesk--frame--get-label frame))
-         (buffer  (current-buffer))
-         (name    (buffer-name buffer))
-         (listing (hotdesk--listing--get-name label)))
-    (when (and label (not (equal name listing)))
+  (let* ((frame  (last-nonminibuffer-frame))
+         (label  (hotdesk--frame--get-label frame))
+         (buffer (current-buffer))
+         (name   (buffer-name buffer)))
+    (when label
       (let ((labels (hotdesk--buffer--get-labels buffer)))
         (unless (memq label labels)
           (hotdesk--buffer--add-label buffer label))))))
@@ -196,11 +195,13 @@ Updates are triggerred by functions like `rename-buffer', `kill-buffer' and
 (defun hotdesk--frame--get-buffers (frame)
   "Return a list of buffers satisfying all hotdesk predicates for FRAME."
   (let ((label (hotdesk--frame--get-label frame)))
-    (seq-filter
-     (lambda (buffer)
-       (and (hotdesk--buffer--filter-is-user-buffer-p buffer)
-            (hotdesk--buffer--filter-is-label-match-p buffer label)))
-     (buffer-list))))
+    (if label
+        (seq-filter
+         (lambda (buffer)
+           (and (hotdesk--buffer--filter-is-user-buffer-p buffer)
+                (hotdesk--buffer--filter-is-label-match-p buffer label)))
+         (buffer-list))
+      (buffer-list))))
 
 (defun hotdesk--frame--init (frame title label)
   "Assign a TITLE and LABEL to FRAME."
