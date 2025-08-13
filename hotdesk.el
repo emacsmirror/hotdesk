@@ -164,8 +164,7 @@
   "On major mode change, append frame label to buffer if not already present."
   (let* ((frame  (last-nonminibuffer-frame))
          (label  (hotdesk--frame--get-label frame))
-         (buffer (current-buffer))
-         (name   (buffer-name buffer)))
+         (buffer (current-buffer)))
     (when label
       (let ((labels (hotdesk--buffer--get-labels buffer)))
         (unless (memq label labels)
@@ -755,9 +754,6 @@ The buffers offerred for selection are restricted to those labelled for
         (let ((buffer (hotdesk--listing--get-buffer-create frame)))
           (display-buffer buffer '(display-buffer-pop-up-window)))
       (message "The frame is invalid or has been deleted."))))
-
-(defalias 'list-hotdesk-buffers #'hotdesk-show-listing
-  "Provide list function as per Emacs standards.")
 
 (defun hotdesk-start-grid-editor ()
   "Display a global interactive buffer-to-frame-label assignment grid."
