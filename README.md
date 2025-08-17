@@ -175,12 +175,49 @@ If you use Emacs `desktop`, `hotdesk` will persist it's labels with
 `desktop-save` and restore them with `desktop-read`, preserving your
 label assignments across sessions.
 
+#### Persisting frame titles
+
 The default `M-x desktop-save` does not save frame titles, which can be annoying
 when restoring multiple frames. You can solve this by adding the following to
 your init sequence:
 
 ```elisp
 (push '(name . nil) frameset-filter-alist)
+```
+
+#### Persisting shell buffers
+
+Standard `desktop-save` does not save and restore your shell buffers, which is
+a handy facility to have. The following snippet in your init sequence will
+add support for this (preserves only the current folder, not the full buffer
+content):
+
+```elisp
+(require 'desktop)
+
+;;
+;;  save shell buffers
+;;
+(defun hotdesk-desktop-save-shell-buffer ( _dirname )
+  "Determine necessary data to save the current shell buffer."
+  `(:dir ,default-directory))
+
+(defun hotdesk-desktop-shell-mode-hook ()
+  "Setup saving of shell buffers."
+  (setq-local desktop-save-buffer 'hotdesk-desktop-save-shell-buffer))
+
+(add-hook 'shell-mode-hook 'hotdesk-desktop-shell-mode-hook)
+
+;;
+;;  restore shell buffers
+;;
+(defun hotdesk-desktop-restore-shell-buffer (_buffer-filename buffer-name buffer-misc)
+  "Restore a shell buffer using the provided buffer name and misc data."
+  (let ((default-directory (plist-get buffer-misc :dir)))
+    (shell buffer-name)))
+
+(add-to-list 'desktop-buffer-mode-handlers
+             '(shell-mode . hotdesk-desktop-restore-shell-buffer))
 ```
 
 ## Advanced configuration
