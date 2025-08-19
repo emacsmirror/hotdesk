@@ -1,4 +1,7 @@
 # hotdesk
+
+[![MELPA](https://melpa.org/packages/hotdesk-badge.svg)](https://melpa.org/#/hotdesk)
+
 `hotdesk` is a non-intrusive (stay out the way) Emacs minor mode providing
 per-frame buffer lists.
 
@@ -35,6 +38,12 @@ is untested.
 
 ### Installation
 
+You can install via [MELPA](http://melpa.org) with the following command:
+
+`M-x package-install [RET] hotdesk [RET]`
+
+or manually:
+
 1. Clone the repository:
 
    ```bash
@@ -55,6 +64,8 @@ Activate `hotdesk` mode globally:
 ```elisp
 (hotdesk-mode 1)
 ```
+
+Now the mode can retain independent per frame buffer lists using labels.
 
 ## Usage
 
