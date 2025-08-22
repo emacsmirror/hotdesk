@@ -170,16 +170,12 @@ Add your own functions to customise labelling rules."
 (defun hotdesk--mode--buffer-hooks-enable ()
   "Activate hooks when mode enabled."
   (add-hook 'after-change-major-mode-hook
-            #'hotdesk--mode--buffer-mode-change-hook)
-  (add-hook 'buffer-list-update-hook
-            #'hotdesk--mode--buffer-list-update-hook))
+            #'hotdesk--mode--buffer-mode-change-hook))
 
 (defun hotdesk--mode--buffer-hooks-disable ()
   "Deactivate hooks when mode disable."
   (remove-hook 'after-change-major-mode-hook
-               #'hotdesk--mode--buffer-mode-change-hook)
-  (remove-hook 'buffer-list-update-hook
-               #'hotdesk--mode--buffer-list-update-hook))
+               #'hotdesk--mode--buffer-mode-change-hook))
 
 (defun hotdesk--mode--buffer-mode-change-hook ()
   "On major mode change, append frame label to buffer if not already present."
@@ -190,12 +186,6 @@ Add your own functions to customise labelling rules."
       (let ((labels (hotdesk--buffer--get-labels buffer)))
         (unless (memq label labels)
           (hotdesk--buffer--add-label buffer label))))))
-
-(defun hotdesk--mode--buffer-list-update-hook ()
-  "Refresh hotdesk ui after a buffer update that affects the listing.
-Updates are triggerred by functions like `rename-buffer', `kill-buffer' and
-`bury-buffer'."
-  (hotdesk-refresh))
 
 ;;
 ;;  frame functions
