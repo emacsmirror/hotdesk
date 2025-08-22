@@ -63,6 +63,27 @@
 (defconst hotdesk--grid-editor-name "*Hotdesk Grid Editor*")
 (defconst hotdesk--list-editor-name "*Hotdesk List Editor*")
 
+(defcustom hotdesk-frame-title-format "Hotdesk - %s"
+  "Format string for frame title, where %s represents the frame's label."
+  :type 'string
+  :group 'hotdesk)
+
+(defcustom hotdesk-buffer-whitelist
+  '("*scratch*" "*Messages*")
+  "List of buffer names always included in hotdesk frame buffer lists."
+  :type '(repeat string)
+  :group 'hotdesk)
+
+(defcustom hotdesk-buffer-deny-label-predicates
+  (list
+   #'hotdesk--buffer--deny-label-buffer-list-p
+   #'hotdesk--buffer--deny-label-internal-buffer-p)
+  "List of predicate functions invoked as (PREDICATE BUFFER LABEL).
+If any returns non-nil, LABEL will not be assigned to BUFFER.
+Add your own functions to customise labelling rules."
+  :type '(repeat function)
+  :group 'hotdesk)
+
 ;;
 ;;  hotdesk mode
 ;;
@@ -192,14 +213,17 @@ Updates are triggerred by functions like `rename-buffer', `kill-buffer' and
   (modify-frame-parameters frame '((hotdesk-tag . nil))))
 
 (defun hotdesk--frame--get-buffers (frame)
-  "Return a list of buffers satisfying all hotdesk predicates for FRAME."
+  "Return a list of buffers satisfying all hotdesk predicates for FRAME.
+Include any `hotdesk-buffer-whitelist' buffers."
   (let ((label (hotdesk--frame--get-label frame)))
     (if label
-        (seq-filter
-         (lambda (buffer)
-           (and (hotdesk--buffer--filter-is-user-buffer-p buffer)
-                (hotdesk--buffer--filter-is-label-match-p buffer label)))
-         (buffer-list))
+        (let ((whitelist (mapcar #'get-buffer hotdesk-buffer-whitelist)))
+          (seq-filter
+           (lambda (buffer)
+             (or (memq buffer whitelist)
+                 (and (hotdesk--buffer--filter-is-user-buffer-p buffer)
+                      (hotdesk--buffer--filter-is-label-match-p buffer label))))
+           (buffer-list)))
       (buffer-list))))
 
 (defun hotdesk--frame--init (frame title label)
@@ -212,16 +236,6 @@ Updates are triggerred by functions like `rename-buffer', `kill-buffer' and
 ;;
 ;;  buffer functions
 ;;
-(defcustom hotdesk-buffer-deny-label-predicates
-  (list
-   #'hotdesk--buffer--deny-label-buffer-list-p
-   #'hotdesk--buffer--deny-label-internal-buffer-p)
-  "List of predicate functions invoked as (PREDICATE BUFFER LABEL).
-If any returns non-nil, LABEL will not be assigned to BUFFER.
-Add your own functions to customise labelling rules."
-  :type '(repeat function)
-  :group 'hotdesk)
-
 (defun hotdesk--buffer--deny-label-buffer-list-p (buffer _label)
   "Return t if BUFFER is a Buffer List buffer."
   (and (string-match-p "\\*Buffer List:" (buffer-name buffer)) t))
@@ -589,11 +603,6 @@ The editor is contolled with:
 ;;
 ;;  hotdesk
 ;;
-(defcustom hotdesk-frame-title-format "Hotdesk - %s"
-  "Format string for frame title, where %s represents the frame's label."
-  :type 'string
-  :group 'hotdesk)
-
 (defun hotdesk--get-all-user-buffers ()
   "Return the global `buffer-list' filtered for user buffers."
   (seq-filter #'hotdesk--buffer--filter-is-user-buffer-p (buffer-list)))

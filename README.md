@@ -20,7 +20,7 @@ In summary `hotdesk` provides alternatives for two core Emacs functions:
   | `list-buffers`     | `C-x C-b`         | `hotdesk-show-listing`       | `C-c C-d C-b`        |
   | `switch-to-buffer` | `C-x b`           | `hotdesk-switch-buffer`      | `C-c C-d b`          |
 
-These provide a frame-filtered versions of the Emacs functions.
+These provide frame-filtered versions of the Emacs functions.
 
 The frame/buffer tracking mechanism is simple:
 
@@ -106,8 +106,9 @@ exec emacsclient -n -c -s server --eval "(hotdesk--frame--init (selected-frame) 
 
 ### 2. Labelling buffers
 
-Whenever you visit a buffer within a frame, the frame's label is automatically
-assigned to the buffer, naturally building frame associations from your usage.
+When you visit a globally new buffer within a frame, the frame's label is
+automatically assigned to the buffer, naturally building frame associations from
+your usage.
 
 Normally that's all you need, however you can view and edit the labels assigned
 to buffers directly with:
@@ -232,6 +233,19 @@ content):
 ```
 
 ## Advanced configuration
+
+### Whitelisting buffers
+
+`hotdesk-buffer-whitelist` holds a list of buffer names to always include with
+frame buffer list, regardless of labelling. It defaults to `*scratch*` and
+`*Messages*`. You can amend in your init with:
+
+```elisp
+(with-eval-after-load 'hotdesk
+  (add-to-list 'hotdesk-buffer-whitelist "My favourite buffer"))
+```
+
+### Restricting labels
 
 The variable `hotdesk-buffer-deny-label-predicates` contains a list of predicate
 functions. Before assigning a label to a buffer, each function in the list is
