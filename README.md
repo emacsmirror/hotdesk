@@ -3,30 +3,37 @@
 [![MELPA](https://melpa.org/packages/hotdesk-badge.svg)](https://melpa.org/#/hotdesk)
 
 `hotdesk` is a non-intrusive (stay out the way) Emacs minor mode providing
-per-frame buffer lists.
-
-It natually captures your usage to produce useful frame buffer associations
-without requiring configuration. This offers an efficient workflow in
-multi-frame environments, keeping your curated work spaces clean and distinct,
-and alleviates navigating a single monolithic buffer list.
+multiple buffer lists. This is preferable to navigating Emacs standard
+monolithic buffer list when you have a lot of buffers open simultaneously.
 
 The motivation for `hotdesk` was to allow a global org clock across multiple
 frames, without losing the sensation of independent Emacs instances.
 
-In summary `hotdesk` provides alternatives for two core Emacs functions:
+There are two main useful scenarios:
+
+* **Standalone Emacs (single frame)** switch between buffer lists to instantly swap
+your current workspace.
+
+* **Client-Server Emacs (multi frame)** assign different buffer lists to different
+frames to maintain distinct workspaces.
+
+Buffer lists grow automatically based on your usage, so don't interfere with
+your workflow or require configuration.
+
+### How it works
+
+In essence `hotdesk` provides alternatives for two core Emacs functions:
 
   | Emacs function     | Emacs key binding | Hotdesk alernative function  |  Hotdesk key binding |
   | ---                | ---               | ---                          | ---                  |
   | `list-buffers`     | `C-x C-b`         | `hotdesk-show-listing`       | `C-c C-d C-b`        |
   | `switch-to-buffer` | `C-x b`           | `hotdesk-switch-buffer`      | `C-c C-d b`          |
 
-These provide frame-filtered versions of the Emacs functions.
-
 The frame/buffer tracking mechanism is simple:
 
-  * a frame can be assigned a single identifying label
-  * a buffer can be assigned multiple labels to determine the frame(s) in
-   which it participates
+  * a frame can be assigned an identifying label
+  * a buffer can be assigned multiple labels to determine in which frame(s) it
+    participates
 
 Multiple frames can use the same label.
 
@@ -65,15 +72,20 @@ Activate `hotdesk` mode globally:
 (hotdesk-mode 1)
 ```
 
-Now the mode can retain independent per frame buffer lists using labels.
+Now the mode can retain an independent buffer list per label.
 
 ## Usage
 
 ### 1. Labelling frames
 
 Labelling a frame enables it to participate in `hotdesk`, and is the only
-configuration requirement for the mode to work. You can interactively manage
-the current frame's label with:
+requirement for the mode to work.
+
+Once a frame is labelled, the buffer list associated with that label is used by
+the frame. Changing the label switches to a different buffer list, and removing
+the label reverts to Emacs standard buffer list.
+
+You can interactively manage the current frame's label with:
 
  * `C-c C-d ?` show the current frame's label
  * `C-c C-d !` set the current frame's label
@@ -81,7 +93,7 @@ the current frame's label with:
  * `C-c C-d @` set the current frame's title (for cosmetic purposes)
 
 Programatically you can set the label for a frame (eg. your 'personal' frame)
-with:
+on startup with:
 
 ``` elisp
 (hotdesk--frame--set-label (selected-frame) 'personal)
@@ -107,8 +119,7 @@ exec emacsclient -n -c -s server --eval "(hotdesk--frame--init (selected-frame) 
 ### 2. Labelling buffers
 
 When you visit a globally new buffer within a frame, the frame's label is
-automatically assigned to the buffer, naturally building frame associations from
-your usage.
+automatically assigned to the buffer, building associations based on your usage.
 
 Normally that's all you need, however you can view and edit the labels assigned
 to buffers directly with:
@@ -148,42 +159,35 @@ to easily modify assignments:
         work.org                         [ ]          [x]
 
 The `[1]` in the heading indicates the number of frames assigned that label.
-Within the grid editor you can toggle a 'Major Mode' column with `m`.
+Within the grid editor you can also toggle a 'Major Mode' column with `m`.
 
 ### 3. Navigating buffers
 
-The `hotdesk` equivalents of Emacs list and switch buffer commands, within a
-frame scope are:
+The `hotdesk` equivalents of Emacs list and switch buffer commands, utilising
+the currently assigned frame label are:
 
- * `C-c C-d C-b` list the buffers for the current frame
- * `C-c C-d b` switch to a buffer belonging to the current frame
+ * `C-c C-d C-b` list the buffers for the current frame's label
+ * `C-c C-d b` switch to a buffer belonging to the current frame's label
 
-Emacs' global buffer list named `*Buffer List*` remains available and
-unchanged. Frame specific buffer lists produced by `hotdesk` are named
-`*Buffer List: <label>*`.
+By default `hotdesk` now reassigns Emacs `C-x C-b` and `C-x b` key bindings to
+these same functions (to quickstart demo the mode upon installation). You can
+disable this behaviour on mode start by customising the
+`hotdesk-overload-default-keys` variable, or in your init:
+
+``` elisp
+(setq hotdesk-overload-default-keys nil)
+```
+
+Emacs' global buffer list named `*Buffer List*` remains available and unchanged
+via `M-x list-buffers`. Label specific buffer lists produced by `hotdesk` are
+named `*Buffer List: <label>*`.
 
 You can always switch to *any* buffer you like by providing it's name in
 full during switching, or using `M-x switch-to-buffer` directly.
 
-> [!TIP]
-> To leverage your existing key memory and boost your productivity, consider
-> swapping the Emacs default key bindings with their `hotdesk` equivalents:
->
-``` elisp
-(add-hook 'hotdesk-mode-hook
-          (lambda ()
-            (if hotdesk-mode
-                (progn
-                  (global-set-key (kbd "C-x C-b") #'hotdesk-show-listing)
-                  (global-set-key (kbd "C-x b")   #'hotdesk-switch-buffer))
-              (progn
-                (global-set-key (kbd "C-x C-b") 'list-buffers)
-                (global-set-key (kbd "C-x b")   'switch-to-buffer)))))
-```
-
 ### 4. Saving the desktop
 
-If you use Emacs `desktop`, `hotdesk` will persist it's labels with
+If you use Emacs' built-in `desktop`, `hotdesk` will persist it's labels with
 `desktop-save` and restore them with `desktop-read`, preserving your
 label assignments across sessions.
 
@@ -201,7 +205,7 @@ your init sequence:
 
 Standard `desktop-save` does not save and restore your shell buffers, which is
 a handy facility to have. The following snippet in your init sequence will
-add support for this (preserves only the current folder, not the full buffer
+add support for this (preserving only the current folder, not the full buffer
 content):
 
 ```elisp
@@ -236,8 +240,8 @@ content):
 
 ### Whitelisting buffers
 
-`hotdesk-buffer-whitelist` holds a list of buffer names to always include with
-frame buffer list, regardless of labelling. It defaults to `*scratch*` and
+`hotdesk-buffer-whitelist` holds a list of buffer names to always include in
+every buffer list, regardless of labelling. It defaults to `*scratch*` and
 `*Messages*`. You can amend in your init with:
 
 ```elisp
@@ -249,8 +253,7 @@ frame buffer list, regardless of labelling. It defaults to `*scratch*` and
 
 The variable `hotdesk-buffer-deny-label-predicates` contains a list of predicate
 functions. Before assigning a label to a buffer, each function in the list is
-checked, invoked via `(fn-p buffer label)`. If any returns `t`, then the label
-assignment is skipped.
+checked. If any returns `t`, then the label assignment is skipped.
 
 Adding your own functions to this list gives you fine-grained control over which
 labels can be assigned to which frames - your own permission system. This helps
@@ -307,9 +310,9 @@ Denied labels appear as gaps within the editors, eg. grid editor
 > [!NOTE]
 > Preventing label assignments doesn't stop you visiting buffers.
 
-Given the above labelling, visiting `projects.org` on your `personal` frame
-(eg. via `org-agena` or by `M-x switch-to-buffer`) will present that buffer.
-However as it won't be assigned a `personal` label, it won't appear in the
-frame's buffer list, nor be offered for selection when switching frame
-buffers. It will naturally move out of scope as you continue working in the
-frame, or you can hide it immediately with `C-c C-d -`.
+Given the above labelling, visiting `projects.org` on your frame labelled
+`personal` (eg. via `org-agena` or by `M-x switch-to-buffer`) presents that
+buffer. However as it won't be assigned a `personal` label, it won't appear in
+the frame's buffer list, nor be offered for selection when switching buffers. It
+will naturally move out of scope as you continue working in the frame, or you
+can hide it immediately with `C-c C-d -`.

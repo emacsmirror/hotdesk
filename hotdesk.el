@@ -1,5 +1,5 @@
-;;; hotdesk.el --- Flexible frame Buffer Lists for projects & workspaces -*- lexical-binding: t; -*-
-;;        
+;;; hotdesk.el --- Multiple buffer lists for projects & workspaces -*- lexical-binding: t; -*-
+;;
 ;; SPDX-License-Identifier: GPL-3.0-or-later
 ;; Copyright (C) 2025-2025 Jonathan Doull
 ;;
@@ -15,27 +15,51 @@
 ;;
 ;;; Commentary:
 ;;
-;; `hotdesk-mode' provides unopinionated per-frame buffer lists that adapt with
+;; `hotdesk-mode' provides multiple buffer lists that adapt to your workflow.
+;;
+;; This allows you to simply split Emacs monolithic buffer list into separate
+;; buffer lists, creating distinct work surfaces.  Example use cases:
+;;
+;;  Standalone Emacs (single frame):
+;;    instantly change your active buffer-list to switch projects or tasks
+;;    (see quickstart below)
+;;
+;;  Client/Server Emacs (multi frame):
+;;    maintain distinct workspaces with independent per-frame buffer-lists
+;;    (by assigning a distinct label to each frame)
+;;
+;; hotdesk is unopinionated and stays out the way, so doesn't interfere with
 ;; your workflow.
 ;;
-;; A frame may be assigned a label; a buffer may be assigned multiple labels.
-;; When a frame and buffer have the same label, they are linked.
+;; No configuration is required (apart from labelling your frame), and buffer
+;; lists are built automatically based on your usage.  Emacs' built-in `desktop`
+;; functions can save and restore your hotdesk sessions.
 ;;
-;; Buffer labelling is automatic and naturally captures your usage, producing
-;; useful frame buffer associations without configuration.  This offers an
-;; efficient workflow in multi-frame environments, giving you curated buffer
-;; lists you can navigate, preserve and manage per frame(s).
+;; Quickstart:
 ;;
-;; A customisable predicate function can prevent combinations of labels and
-;; buffers (a rudimentary permission system).  The mode also provides utilities
-;; and UI editors for fine-tuning label assignments.
+;;  1.  (require 'hotdesk)
+;;      (hotdesk-mode 1)
 ;;
-;; Usage:
+;;  2.  Demo the mode's behaviour (using default key bindings):
 ;;
-;;   (require 'hotdesk)
-;;   (hotdesk-mode 1)
+;;      `C-c C-d ! desk1`    label your frame 'desk1'
+;;      `C-c C-d ?`          verify the label is 'desk1'
+;;      <open some buffers>
+;;      `C-x C-b`            show the 'desk1' buffer list
 ;;
-;; See README.md or the project URL for configuration and advanced commands.
+;;      `C-c C-d ! desk2`    label your frame 'desk2'
+;;      `C-c C-d ?`          verify the label is 'desk2'
+;;      <open some different buffers>
+;;      `C-x C-b`            show the 'desk2' buffer list
+;;
+;;      `C-c C-d ! desk1`    swap to 'desk1' buffer list
+;;      `C-x C-b`            show the 'desk1' buffer list again
+;;
+;;      `C-c C-d d`          show/adjust your label assignments
+;;
+;; See README.md at project URL for more info, integration tips and advanced
+;; features.
+;;
 ;;
 ;;; License:
 ;;
@@ -66,6 +90,11 @@
 (defcustom hotdesk-frame-title-format "Hotdesk - %s"
   "Format string for frame title, where %s represents the frame's label."
   :type 'string
+  :group 'hotdesk)
+
+(defcustom hotdesk-overload-default-keys t
+  "When non-nil, reassign buffer navigation keys to hotdesk on mode start."
+  :type 'boolean
   :group 'hotdesk)
 
 (defcustom hotdesk-buffer-whitelist
@@ -137,6 +166,7 @@ Add your own functions to customise labelling rules."
       (progn
         (hotdesk--desktop--enable)
         (hotdesk--mode--buffer-hooks-enable)
+        (hotdesk--mode--overload-key-bindings-enable)
         (add-hook 'hotdesk-grid-editor-mode-hook
                   #'hotdesk--grid-editor--mode-on-start)
         (add-hook 'hotdesk-list-editor-mode-hook
@@ -146,6 +176,7 @@ Add your own functions to customise labelling rules."
     (progn
       (hotdesk--desktop--disable)
       (hotdesk--mode--buffer-hooks-disable)
+      (hotdesk--mode--overload-key-bindings-disable)
       (remove-hook 'hotdesk-grid-editor-mode-hook
                    #'hotdesk--grid-editor--mode-on-start)
       (remove-hook 'hotdesk-list-editor-mode-hook
@@ -186,6 +217,18 @@ Add your own functions to customise labelling rules."
       (let ((labels (hotdesk--buffer--get-labels buffer)))
         (unless (memq label labels)
           (hotdesk--buffer--add-label buffer label))))))
+
+(defun hotdesk--mode--overload-key-bindings-enable ()
+  "Assume default Emacs keys if `hotdesk-overload-default-keys' not nil."
+  (when hotdesk-overload-default-keys
+    (global-set-key (kbd "C-x C-b") #'hotdesk-show-listing)
+    (global-set-key (kbd "C-x b")   #'hotdesk-switch-buffer)))
+
+(defun hotdesk--mode--overload-key-bindings-disable ()
+  "Restore default Emacs keys if `hotdesk-overload-default-keys' not nil."
+  (when hotdesk-overload-default-keys
+    (global-set-key (kbd "C-x C-b") #'list-buffers)
+    (global-set-key (kbd "C-x b")   #'switch-to-buffer)))
 
 ;;
 ;;  frame functions
